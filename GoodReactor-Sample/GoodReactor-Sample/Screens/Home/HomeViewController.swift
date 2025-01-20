@@ -120,9 +120,10 @@ private extension HomeViewController {
     }
 
     func bindActions(reactor: HomeViewModel) {
-        Publishers.Merge(
+        Publishers.Merge3(
             increasingButton.publisher(for: .touchUpInside).map { _ in .updateCounterValue(.increase) },
-            decreasingButton.publisher(for: .touchUpInside).map { _ in .updateCounterValue(.decrease) }
+            decreasingButton.publisher(for: .touchUpInside).map { _ in .updateCounterValue(.decrease) },
+            aboutAppButton.publisher(for: .touchUpInside).map { _ in .goToAbout }
         )
         .subscribe(reactor.action)
         .store(in: &cancellables)

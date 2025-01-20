@@ -22,15 +22,35 @@ public protocol Coordinator: AnyObject {
     var children: NSPointerArray { get }
 
     ///Coordinator's root `UIViewController`
-    var rootViewController: UIViewController? { get }
+    var rootViewController: UIViewController? { get set }
 
     ///Coordinator's root `UINavigationViewController`
     var rootNavigationController: UINavigationController? { get }
 
+    /// Search for the first matching coordinator in hierarchy
+    /// Need to setup parent coordinator to establish the coordinator hierarchy
     func firstCoordinatorOfType<T>(type: T.Type) -> T?
+
+    /// Search for the last matching coordinator in hierarchy
+    /// Need to setup parent coordinator to establish the coordinator hierarchy
     func lastCoordinatorOfType<T>(type: T.Type) -> T?
+
+    /// Recursively searches through all children of this coordinator and resets
+    /// their children and parent references to `nil`.
     func resetChildReferences()
+
+    /// Returns the most embedded coordinator in coordinator hierarchy with a specified type.
+    /// Searches through all branches of coordinators and returns the last match. Result might
+    /// not necessarilly be the most embedded coordinator with respecting type.
+    /// - Parameter type: Type of child coordinator to find
+    /// - Returns: Child coordinator of a specified type
     func lastChildOfType<T>(type: T.Type) -> T?
+
+    /// Returns the most embedded coordinator in the current branch of hierarchy. Does not check
+    /// other branches and thus does not return the most embedded coordinator globally.
+    /// This function does not search for a specific type of child coordinator unlike
+    /// `lastChildOfType(type:)`.
+    /// - Returns: Most embedded coordinator in current branch of hierarchy
     func lastChild() -> Coordinator
 
 }
@@ -48,7 +68,7 @@ open class GoodCoordinator<Step>: Coordinator {
     open var parentCoordinator: Coordinator?
     @Published open var step: Step?
 
-    open weak var rootViewController: UIViewController?
+    open var rootViewController: UIViewController?
     open var rootNavigationController: UINavigationController? {
         return rootViewController as? UINavigationController
     }
@@ -59,8 +79,6 @@ open class GoodCoordinator<Step>: Coordinator {
         self.parentCoordinator?.children.addObject(self)
     }
 
-    /// Search for the first matching coordinator in hierarchy
-    /// Need to setup parent coordinator to establish the coordinator hierarchy
     public func firstCoordinatorOfType<T>(type: T.Type) -> T? {
         if let thisCoordinator = self as? T {
             return thisCoordinator
@@ -70,8 +88,6 @@ open class GoodCoordinator<Step>: Coordinator {
         return nil
     }
 
-    /// Search for the last matching coordinator in hierarchy
-    /// Need to setup parent coordinator to establish the coordinator hierarchy
     public func lastCoordinatorOfType<T>(type: T.Type) -> T? {
         if let parentCoordinator = parentCoordinator,
            let lastResult = parentCoordinator.lastCoordinatorOfType(type: T.self) {
@@ -81,8 +97,6 @@ open class GoodCoordinator<Step>: Coordinator {
         }
     }
 
-    /// Recursively searches through all children of this coordinator and resets
-    /// their children and parent references to `nil`.
     public func resetChildReferences() {
         while let child = children.popLast() as? GoodCoordinator<Step> {
             child.resetChildReferences()
@@ -90,11 +104,6 @@ open class GoodCoordinator<Step>: Coordinator {
         }
     }
 
-    /// Returns the most embedded coordinator in coordinator hierarchy with a specified type.
-    /// Searches through all branches of coordinators and returns the last match. Result might
-    /// not necessarilly be the most embedded coordinator with respecting type.
-    /// - Parameter type: Type of child coordinator to find
-    /// - Returns: Child coordinator of a specified type
     public func lastChildOfType<T>(type: T.Type) -> T? {
         guard let children = children.copy() as? NSPointerArray else { return self as? T }
 
@@ -106,11 +115,6 @@ open class GoodCoordinator<Step>: Coordinator {
         return self as? T
     }
 
-    /// Returns the most embedded coordinator in the current branch of hierarchy. Does not check
-    /// other branches and thus does not return the most embedded coordinator globally.
-    /// This function does not search for a specific type of child coordinator unlike
-    /// `lastChildOfType(type:)`.
-    /// - Returns: Most embedded coordinator in current branch of hierarchy
     public func lastChild() -> Coordinator {
         guard let children = children.copy() as? NSPointerArray else { return self }
 
