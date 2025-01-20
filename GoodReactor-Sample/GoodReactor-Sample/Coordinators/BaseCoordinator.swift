@@ -9,7 +9,6 @@ import LegacyReactor
 import Combine
 import SafariServices
 
-
 enum StepAction {
 
     case push(UIViewController)
@@ -59,21 +58,8 @@ class BaseCoordinator<Step>: GoodCoordinator<Step> {
         return rootViewController
     }
 
-    var rootViewController: UIViewController?
-
-    var rootNavigationController: UINavigationController? {
-        return rootViewController as? UINavigationController
-    }
-
     var navigationController: UINavigationController? {
         return rootViewController as? UINavigationController
-    }
-
-    init(rootViewController: UIViewController? = nil, parentCoordinator: GoodCoordinator<Step>? = nil) {
-        super.init(parentCoordinator: parentCoordinator)
-
-        self.parentCoordinator = parentCoordinator
-        self.rootViewController = rootViewController
     }
 
     @discardableResult

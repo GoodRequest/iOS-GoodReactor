@@ -10,20 +10,53 @@ import Combine
 import CombineExt
 import SwiftUI
 
+public protocol Coordinator: AnyObject {
+
+    ///`Set` of `AnyCancellable` objects used to keep track of any cancellables created while using `Combine`.
+    var cancellables: Set<AnyCancellable> { get }
+
+    ///Used to establish the coordinator hierarchy.
+    var parentCoordinator: Coordinator? { get }
+
+    ///Pointer to all Coordinator objects, that uses this Coordinator as `parentCoordinator`.
+    var children: NSPointerArray { get }
+
+    ///Coordinator's root `UIViewController`
+    var rootViewController: UIViewController? { get }
+
+    ///Coordinator's root `UINavigationViewController`
+    var rootNavigationController: UINavigationController? { get }
+
+    func firstCoordinatorOfType<T>(type: T.Type) -> T?
+    func lastCoordinatorOfType<T>(type: T.Type) -> T?
+    func resetChildReferences()
+    func lastChildOfType<T>(type: T.Type) -> T?
+    func lastChild() -> Coordinator
+
+}
+
+
 ///GoodCoordinator is used for managing navigation flow and data flow between different parts of an app.
 ///It is a generic class that takes a Step type as its generic parameter.
 @available(iOS 13.0, *)
-open class GoodCoordinator<Step>: NSObject {
+open class GoodCoordinator<Step>: Coordinator {
 
-    ///`Set` of `AnyCancellable` objects used to keep track of any cancellables created while using `Combine`.
     open var cancellables: Set<AnyCancellable> = Set()
 
-    ///Used to establish the coordinator hierarchy.
-    open var parentCoordinator: GoodCoordinator<Step>?
+    open var children = NSPointerArray.weakObjects()
+
+    open var parentCoordinator: Coordinator?
     @Published open var step: Step?
 
-    public init(parentCoordinator: GoodCoordinator<Step>? = nil) {
+    open weak var rootViewController: UIViewController?
+    open var rootNavigationController: UINavigationController? {
+        return rootViewController as? UINavigationController
+    }
+
+    public init(rootViewController: UIViewController? = nil, parentCoordinator: Coordinator? = nil) {
+        self.rootViewController = rootViewController
         self.parentCoordinator = parentCoordinator
+        self.parentCoordinator?.children.addObject(self)
     }
 
     /// Search for the first matching coordinator in hierarchy
@@ -46,6 +79,45 @@ open class GoodCoordinator<Step>: NSObject {
         } else {
             return self as? T
         }
+    }
+
+    /// Recursively searches through all children of this coordinator and resets
+    /// their children and parent references to `nil`.
+    public func resetChildReferences() {
+        while let child = children.popLast() as? GoodCoordinator<Step> {
+            child.resetChildReferences()
+            child.parentCoordinator = nil
+        }
+    }
+
+    /// Returns the most embedded coordinator in coordinator hierarchy with a specified type.
+    /// Searches through all branches of coordinators and returns the last match. Result might
+    /// not necessarilly be the most embedded coordinator with respecting type.
+    /// - Parameter type: Type of child coordinator to find
+    /// - Returns: Child coordinator of a specified type
+    public func lastChildOfType<T>(type: T.Type) -> T? {
+        guard let children = children.copy() as? NSPointerArray else { return self as? T }
+
+        while let child = children.popLast() as? GoodCoordinator<Step> {
+            if let lastResult = child.lastChildOfType(type: T.self)  {
+                return lastResult
+            }
+        }
+        return self as? T
+    }
+
+    /// Returns the most embedded coordinator in the current branch of hierarchy. Does not check
+    /// other branches and thus does not return the most embedded coordinator globally.
+    /// This function does not search for a specific type of child coordinator unlike
+    /// `lastChildOfType(type:)`.
+    /// - Returns: Most embedded coordinator in current branch of hierarchy
+    public func lastChild() -> Coordinator {
+        guard let children = children.copy() as? NSPointerArray else { return self }
+
+        while let child = children.popLast() as? GoodCoordinator<Step> {
+            return child.lastChild()
+        }
+        return self
     }
 
 }
