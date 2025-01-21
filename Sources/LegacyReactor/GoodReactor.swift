@@ -10,13 +10,13 @@ import Combine
 import CombineExt
 import SwiftUI
 
-public protocol Coordinator: AnyObject {
+public protocol Coordinator: NSObject, AnyObject {
 
     ///`Set` of `AnyCancellable` objects used to keep track of any cancellables created while using `Combine`.
     var cancellables: Set<AnyCancellable> { get }
 
     ///Used to establish the coordinator hierarchy.
-    var parentCoordinator: Coordinator? { get }
+    var parentCoordinator: Coordinator? { get set }
 
     ///Pointer to all Coordinator objects, that uses this Coordinator as `parentCoordinator`.
     var children: NSPointerArray { get }
@@ -55,28 +55,10 @@ public protocol Coordinator: AnyObject {
 
 }
 
+extension Coordinator {
 
-///GoodCoordinator is used for managing navigation flow and data flow between different parts of an app.
-///It is a generic class that takes a Step type as its generic parameter.
-@available(iOS 13.0, *)
-open class GoodCoordinator<Step>: Coordinator {
-
-    open var cancellables: Set<AnyCancellable> = Set()
-
-    open var children = NSPointerArray.weakObjects()
-
-    open var parentCoordinator: Coordinator?
-    @Published open var step: Step?
-
-    open var rootViewController: UIViewController?
-    open var rootNavigationController: UINavigationController? {
+    public var rootNavigationController: UINavigationController? {
         return rootViewController as? UINavigationController
-    }
-
-    public init(rootViewController: UIViewController? = nil, parentCoordinator: Coordinator? = nil) {
-        self.rootViewController = rootViewController
-        self.parentCoordinator = parentCoordinator
-        self.parentCoordinator?.children.addObject(self)
     }
 
     public func firstCoordinatorOfType<T>(type: T.Type) -> T? {
@@ -98,7 +80,7 @@ open class GoodCoordinator<Step>: Coordinator {
     }
 
     public func resetChildReferences() {
-        while let child = children.popLast() as? GoodCoordinator<Step> {
+        while let child = children.popLast() as? Coordinator {
             child.resetChildReferences()
             child.parentCoordinator = nil
         }
@@ -107,7 +89,7 @@ open class GoodCoordinator<Step>: Coordinator {
     public func lastChildOfType<T>(type: T.Type) -> T? {
         guard let children = children.copy() as? NSPointerArray else { return self as? T }
 
-        while let child = children.popLast() as? GoodCoordinator<Step> {
+        while let child = children.popLast() as? Coordinator {
             if let lastResult = child.lastChildOfType(type: T.self)  {
                 return lastResult
             }
@@ -118,10 +100,34 @@ open class GoodCoordinator<Step>: Coordinator {
     public func lastChild() -> Coordinator {
         guard let children = children.copy() as? NSPointerArray else { return self }
 
-        while let child = children.popLast() as? GoodCoordinator<Step> {
+        while let child = children.popLast() as? Coordinator {
             return child.lastChild()
         }
         return self
+    }
+
+}
+
+///GoodCoordinator is used for managing navigation flow and data flow between different parts of an app.
+///It is a generic class that takes a Step type as its generic parameter.
+@available(iOS 13.0, *)
+open class GoodCoordinator<Step>: NSObject, Coordinator {
+
+    open var cancellables: Set<AnyCancellable> = Set()
+
+    open var children = NSPointerArray.weakObjects()
+
+    open var parentCoordinator: Coordinator?
+    @Published open var step: Step?
+
+    open var rootViewController: UIViewController?
+
+    public init(rootViewController: UIViewController? = nil, parentCoordinator: Coordinator? = nil) {
+        super.init()
+
+        self.rootViewController = rootViewController
+        self.parentCoordinator = parentCoordinator
+        self.parentCoordinator?.children.addObject(self)
     }
 
 }

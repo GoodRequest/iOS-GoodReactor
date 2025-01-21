@@ -58,10 +58,6 @@ class BaseCoordinator<Step>: GoodCoordinator<Step> {
         return rootViewController
     }
 
-    var navigationController: UINavigationController? {
-        return rootViewController as? UINavigationController
-    }
-
     @discardableResult
     func navigate(to stepper: Step) -> StepAction {
         return .none

@@ -25,7 +25,7 @@ class HomeCoordinator: BaseCoordinator<AppStep> {
         let homeViewModel = HomeViewModel(coordinator: self)
         let homeViewController = HomeViewController(viewModel: homeViewModel)
 
-        navigationController?.viewControllers = [homeViewController]
+        rootNavigationController?.viewControllers = [homeViewController]
 
         return rootViewController
     }
