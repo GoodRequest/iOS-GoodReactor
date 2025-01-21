@@ -7,7 +7,7 @@
 
 import Combine
 import Foundation
-import GoodReactor
+import LegacyReactor
 
 final class AboutViewModel: GoodReactor {
 
@@ -32,7 +32,7 @@ final class AboutViewModel: GoodReactor {
 
     // MARK: - Initialization
 
-    init(coordinator: Coordinator<AppStep>) {
+    init(coordinator: BaseCoordinator<AppStep>) {
         self.coordinator = coordinator
 
         initialState = State()

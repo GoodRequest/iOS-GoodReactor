@@ -10,24 +10,57 @@ import Combine
 import CombineExt
 import SwiftUI
 
-///GoodCoordinator is used for managing navigation flow and data flow between different parts of an app.
-///It is a generic class that takes a Step type as its generic parameter.
-@available(iOS 13.0, *)
-open class GoodCoordinator<Step>: NSObject {
+public protocol Coordinator: NSObject, AnyObject {
 
     ///`Set` of `AnyCancellable` objects used to keep track of any cancellables created while using `Combine`.
-    open var cancellables: Set<AnyCancellable> = Set()
+    var cancellables: Set<AnyCancellable> { get }
 
     ///Used to establish the coordinator hierarchy.
-    open var parentCoordinator: GoodCoordinator<Step>?
-    @Published open var step: Step?
+    var parentCoordinator: Coordinator? { get set }
 
-    public init(parentCoordinator: GoodCoordinator<Step>? = nil) {
-        self.parentCoordinator = parentCoordinator
-    }
+    ///Pointer to all Coordinator objects, that uses this Coordinator as `parentCoordinator`.
+    var children: NSPointerArray { get }
+
+    ///Coordinator's root `UIViewController`
+    var rootViewController: UIViewController? { get set }
+
+    ///Coordinator's root `UINavigationViewController`
+    var rootNavigationController: UINavigationController? { get }
 
     /// Search for the first matching coordinator in hierarchy
     /// Need to setup parent coordinator to establish the coordinator hierarchy
+    func firstCoordinatorOfType<T>(type: T.Type) -> T?
+
+    /// Search for the last matching coordinator in hierarchy
+    /// Need to setup parent coordinator to establish the coordinator hierarchy
+    func lastCoordinatorOfType<T>(type: T.Type) -> T?
+
+    /// Recursively searches through all children of this coordinator and resets
+    /// their children and parent references to `nil`.
+    func resetChildReferences()
+
+    /// Returns the most embedded coordinator in coordinator hierarchy with a specified type.
+    /// Searches through all branches of coordinators and returns the last match. Result might
+    /// not necessarilly be the most embedded coordinator with respecting type.
+    /// - Parameter type: Type of child coordinator to find
+    /// - Returns: Child coordinator of a specified type
+    func lastChildOfType<T>(type: T.Type) -> T?
+
+    /// Returns the most embedded coordinator in the current branch of hierarchy. Does not check
+    /// other branches and thus does not return the most embedded coordinator globally.
+    /// This function does not search for a specific type of child coordinator unlike
+    /// `lastChildOfType(type:)`.
+    /// - Returns: Most embedded coordinator in current branch of hierarchy
+    func lastChild() -> Coordinator
+
+}
+
+extension Coordinator {
+
+    public var rootNavigationController: UINavigationController? {
+        return rootViewController as? UINavigationController
+    }
+
     public func firstCoordinatorOfType<T>(type: T.Type) -> T? {
         if let thisCoordinator = self as? T {
             return thisCoordinator
@@ -37,8 +70,6 @@ open class GoodCoordinator<Step>: NSObject {
         return nil
     }
 
-    /// Search for the last matching coordinator in hierarchy
-    /// Need to setup parent coordinator to establish the coordinator hierarchy
     public func lastCoordinatorOfType<T>(type: T.Type) -> T? {
         if let parentCoordinator = parentCoordinator,
            let lastResult = parentCoordinator.lastCoordinatorOfType(type: T.self) {
@@ -46,6 +77,57 @@ open class GoodCoordinator<Step>: NSObject {
         } else {
             return self as? T
         }
+    }
+
+    public func resetChildReferences() {
+        while let child = children.popLast() as? Coordinator {
+            child.resetChildReferences()
+            child.parentCoordinator = nil
+        }
+    }
+
+    public func lastChildOfType<T>(type: T.Type) -> T? {
+        guard let children = children.copy() as? NSPointerArray else { return self as? T }
+
+        while let child = children.popLast() as? Coordinator {
+            if let lastResult = child.lastChildOfType(type: T.self)  {
+                return lastResult
+            }
+        }
+        return self as? T
+    }
+
+    public func lastChild() -> Coordinator {
+        guard let children = children.copy() as? NSPointerArray else { return self }
+
+        while let child = children.popLast() as? Coordinator {
+            return child.lastChild()
+        }
+        return self
+    }
+
+}
+
+///GoodCoordinator is used for managing navigation flow and data flow between different parts of an app.
+///It is a generic class that takes a Step type as its generic parameter.
+@available(iOS 13.0, *)
+open class GoodCoordinator<Step>: NSObject, Coordinator {
+
+    open var cancellables: Set<AnyCancellable> = Set()
+
+    open var children = NSPointerArray.weakObjects()
+
+    open var parentCoordinator: Coordinator?
+    @Published open var step: Step?
+
+    open var rootViewController: UIViewController?
+
+    public init(rootViewController: UIViewController? = nil, parentCoordinator: Coordinator? = nil) {
+        super.init()
+
+        self.rootViewController = rootViewController
+        self.parentCoordinator = parentCoordinator
+        self.parentCoordinator?.children.addObject(self)
     }
 
 }

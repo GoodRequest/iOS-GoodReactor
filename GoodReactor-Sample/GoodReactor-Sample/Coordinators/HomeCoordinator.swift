@@ -13,7 +13,7 @@ enum HomeStep {
 
 }
 
-class HomeCoordinator: Coordinator<AppStep> {
+class HomeCoordinator: BaseCoordinator<AppStep> {
 
     init() {
         super.init(rootViewController: UINavigationController())
@@ -25,7 +25,7 @@ class HomeCoordinator: Coordinator<AppStep> {
         let homeViewModel = HomeViewModel(coordinator: self)
         let homeViewController = HomeViewController(viewModel: homeViewModel)
 
-        navigationController?.viewControllers = [homeViewController]
+        rootNavigationController?.viewControllers = [homeViewController]
 
         return rootViewController
     }
