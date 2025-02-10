@@ -119,7 +119,7 @@ struct ContentView: View {
         })
         .navigationDestination(isPresented: $model.destinations.detail, destination: {
             if case .detail(let value) = model.destination {
-                DetailView(value: value)
+                DetailView()
             }
         })
         .alert("Error", isPresented: $model.destinations.errorAlert) {

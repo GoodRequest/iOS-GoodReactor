@@ -78,10 +78,10 @@ import SwiftUI
     /// State of the view
     ///
     /// ## In iOS 17+:
-    /// Mark the state as an `@Observable` final class (from Observation framework).
+    /// Mark the state as a `@MainActor @Observable` final class (from Observation framework).
     ///
     /// ```swift
-    /// @Observable final class State {
+    /// @MainActor @Observable final class State {
     ///     var count: Int = 10
     ///}
     ///```
@@ -609,5 +609,88 @@ public extension Reactor {
     var currentState: State {
         state
     }
+
+}
+
+// MARK: - Shared state
+
+@MainActor public final class SharedStateIdentifier: Identifier, Sendable {
+
+    static let shared = SharedStateIdentifier()
+
+    private init() {}
+
+}
+
+@MainActor public protocol SharedStateKey {
+
+    associatedtype Value
+
+    init()
+
+    var id: SharedStateIdentifier { get }
+    static var defaultValue: Value { get }
+
+}
+
+public extension SharedStateKey {
+
+    var id: SharedStateIdentifier { .shared }
+
+}
+
+@MainActor internal protocol Scope {
+
+    var scopedState: WeakMapTable<SharedStateIdentifier, Any> { get }
+
+}
+
+extension Scope {
+
+    public func value<T, K: SharedStateKey>(forKey sharedStateKey: K, at path: KeyPath<K.Value, T>) -> T {
+        scopedState.forceCastedValue(forKey: sharedStateKey.id, default: K.defaultValue)[keyPath: path]
+    }
+
+    public func state<K: SharedStateKey>(forKey sharedStateKey: K) -> K.Value {
+        scopedState.forceCastedValue(forKey: sharedStateKey.id, default: K.defaultValue)
+    }
+
+}
+
+public final class GlobalScope: Scope {
+
+    public static let global = GlobalScope()
+
+    private init() {}
+
+    internal var scopedState: WeakMapTable<SharedStateIdentifier, Any> = .init()
+
+    public subscript<K: SharedStateKey>(_ key: K) -> K.Value {
+        get {
+            scopedState.forceCastedValue(forKey: key.id, default: K.defaultValue)
+        }
+        set {
+            scopedState.setValue(newValue, forKey: key.id)
+        }
+    }
+
+}
+
+extension Scope {
+
+//    var __shared_SomeViewModelState: SomeViewModelState.__Shared {
+//        get {
+//            self[__Key_Shared_SomeViewModelState.self]
+//        }
+//        set {
+//            self[__Key_Shared_SomeViewModelState.self] = newValue
+//        }
+//    }
+
+//    private struct __Key_Shared_SomeViewModelState: SharedStateKey {
+//        var id: SharedStateIdentifier = .init()
+//        static var defaultValue: SomeViewModelState.__Shared { .init() }
+//    }
+//    let __sharedStateKey: any SharedStateKey = __Key_Shared_SomeViewModelState()
 
 }

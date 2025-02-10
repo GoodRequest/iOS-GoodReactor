@@ -1,5 +1,5 @@
 {
-  "originHash" : "c18ed7d4c3eb52cbc342b966d828442d2dfac554400b8af9825017e69d038392",
+  "originHash" : "2f2b7b0b40ec0cfbacae9ed16c05454b271d18263ee511529a3bc3c38cf26d7f",
   "pins" : [
     {
       "identity" : "alamofire",
@@ -42,8 +42,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/GoodRequest/GoodCoordinator-iOS",
       "state" : {
-        "revision" : "3b5fc8c164477a2ff3ad902cf7e5854015dcc147",
-        "version" : "3.0.3"
+        "revision" : "09ac74c6d6b17080d09618dee922c6fb76e65d18",
+        "version" : "3.0.4"
       }
     },
     {

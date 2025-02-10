@@ -16,13 +16,53 @@ import Observation
 
     enum Action {
 
+        case changeUsername(String)
+
     }
 
     enum Mutation {
 
     }
 
-    @Observable final class State {
+    @MainActor @Observable final class State {
+
+        // MARK: - studentsCount
+
+        private struct __Key_Shared_studentsCount: SharedStateKey {
+            static var defaultValue: Int { 0 }
+        }
+        private let __key_shared_studentsCount = __Key_Shared_studentsCount()
+
+        var studentsCount: Int {
+            get {
+                _$observationRegistrar.access(self, keyPath: \.studentsCount)
+                return GlobalScope.global[__key_shared_studentsCount]
+            }
+            set {
+                _$observationRegistrar.willSet(self, keyPath: \.studentsCount)
+                GlobalScope.global[__key_shared_studentsCount] = newValue
+                _$observationRegistrar.didSet(self, keyPath: \.studentsCount)
+            }
+        }
+
+        // MARK: - car
+
+        private struct __Key_Shared_profile: SharedStateKey {
+            static var defaultValue: Profile { Profile() }
+        }
+        private let __key_shared_profile = __Key_Shared_profile()
+
+        var profile: Profile {
+            get {
+                _$observationRegistrar.access(self, keyPath: \.profile)
+                return GlobalScope.global[__key_shared_profile]
+            }
+            set {
+                _$observationRegistrar.willSet(self, keyPath: \.profile)
+                GlobalScope.global[__key_shared_profile] = newValue
+                _$observationRegistrar.didSet(self, keyPath: \.profile)
+            }
+        }
 
     }
 
@@ -35,7 +75,13 @@ import Observation
     }
 
     func reduce(state: inout State, event: Event) {
+        switch event.kind {
+        case .action(.changeUsername(let newUsername)):
+            state.profile.username = newUsername
 
+        default:
+            break
+        }
     }
 
 }
